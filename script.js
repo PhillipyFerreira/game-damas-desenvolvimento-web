@@ -11,60 +11,59 @@ window.onload = function () {
     [0, 2, 0, 2, 0, 2, 0, 2],
     [2, 0, 2, 0, 2, 0, 2, 0]
   ];
-  //arrays to store the instances
+  //Array que armazena a ID da peça
   var pieces = [];
   var tiles = [];
 
-  //distance formula
+  //Fomula de distância, baseada em Pitágoras
   var dist = function (x1, y1, x2, y2) {
     return Math.sqrt(Math.pow((x1 - x2), 2) + Math.pow((y1 - y2), 2));
   }
-  //Piece object - there are 24 instances of them in a checkers game
+  //24 peças em um jogo, 12 para cada jogador
   function Piece(element, position) {
-    // when jump exist, regular move is not allowed
-    // since there is no jump at round 1, all pieces are allowed to move initially
+    // Se a captura for possível, movimentos simples não são permitidos para nenhuma peça
     this.allowedtomove = true;
     //linked DOM element
     this.element = element;
-    //positions on gameBoard array in format row, column
+    //posição no tabuleiro, composta por X,Y, linha e coluna
     this.position = position;
-    //which player's piece i it
+    //Identtificação de qual jogador é a peça
     this.player = '';
-    //figure out player by piece id
+    //Jogador 1 são os ID menores que 12, as demais são do jogador 2
     if (this.element.attr("id") < 12)
       this.player = 1;
     else
       this.player = 2;
-    //makes object a king
+    //Verifica se a peça já é uma dama
     this.king = false;
     this.makeKing = function () {
       this.element.css("backgroundImage", "url('img/king" + this.player + ".png')");
       this.king = true;
     }
-    //moves the piece
+    //Função de locomoção
     this.move = function (tile) {
       this.element.removeClass('selected');
       if (!Board.isValidPlacetoMove(tile.position[0], tile.position[1])) return false;
-      //make sure piece doesn't go backwards if it's not a king
+      //Não permitte que a peça mova para trás, exceto a dama
       if (this.player == 1 && this.king == false) {
         if (tile.position[0] < this.position[0]) return false;
       } else if (this.player == 2 && this.king == false) {
         if (tile.position[0] > this.position[0]) return false;
       }
-      //remove the mark from Board.board and put it in the new spot
+      //Identifica posição do tabuleiro como vazia e marca a nova posição
       Board.board[this.position[0]][this.position[1]] = 0;
       Board.board[tile.position[0]][tile.position[1]] = this.player;
       this.position = [tile.position[0], tile.position[1]];
-      //change the css using board's dictionary
+      //Altera a posição da peça
       this.element.css('top', Board.dictionary[this.position[0]]);
       this.element.css('left', Board.dictionary[this.position[1]]);
-      //if piece reaches the end of the row on opposite side crown it a king (can move all directions)
+      //Se estive na posição inversa da inicial se transforma em dama
       if (!this.king && (this.position[0] == 0 || this.position[0] == 7))
         this.makeKing();
       return true;
     };
 
-    //tests if piece can jump anywhere
+    //Verifica se a peça pode pular
     this.canJumpAny = function () {
       return (this.canOpponentJump([this.position[0] + 2, this.position[1] + 2]) ||
         this.canOpponentJump([this.position[0] + 2, this.position[1] - 2]) ||
@@ -72,30 +71,29 @@ window.onload = function () {
         this.canOpponentJump([this.position[0] - 2, this.position[1] - 2]))
     };
 
-    //tests if an opponent jump can be made to a specific place
+    //Verifica se o movimento de captura da peça pode ser feito
     this.canOpponentJump = function (newPosition) {
-      //find what the displacement is
+      //Verifica a nova posição
       var dx = newPosition[1] - this.position[1];
       var dy = newPosition[0] - this.position[0];
-      //make sure object doesn't go backwards if not a king
+      //Verifica se a movimentação é permitida
       if (this.player == 1 && this.king == false) {
         if (newPosition[0] < this.position[0]) return false;
       } else if (this.player == 2 && this.king == false) {
         if (newPosition[0] > this.position[0]) return false;
       }
-      //must be in bounds
+      //Movimentação dentro do tabuleiro
       if (newPosition[0] > 7 || newPosition[1] > 7 || newPosition[0] < 0 || newPosition[1] < 0) return false;
-      //middle tile where the piece to be conquered sits
+      //Posição onde fica a peça a ser capturada
       var tileToCheckx = this.position[1] + dx / 2;
       var tileToChecky = this.position[0] + dy / 2;
       if (tileToCheckx > 7 || tileToChecky > 7 || tileToCheckx < 0 || tileToChecky < 0) return false;
-      //if there is a piece there and there is no piece in the space after that
+      //Verifica se há espaço para se lovomover
       if (!Board.isValidPlacetoMove(tileToChecky, tileToCheckx) && Board.isValidPlacetoMove(newPosition[0], newPosition[1])) {
-        //find which object instance is sitting there
         for (let pieceIndex in pieces) {
           if (pieces[pieceIndex].position[0] == tileToChecky && pieces[pieceIndex].position[1] == tileToCheckx) {
             if (this.player != pieces[pieceIndex].player) {
-              //return the piece sitting there
+              //Retorna a posição da peça capturada
               return pieces[pieceIndex];
             }
           }
@@ -106,7 +104,7 @@ window.onload = function () {
 
     this.opponentJump = function (tile) {
       var pieceToRemove = this.canOpponentJump(tile.position);
-      //if there is a piece to be removed, remove it
+      //Remova a peça capturada
       if (pieceToRemove) {
         pieceToRemove.remove();
         return true;
@@ -115,7 +113,7 @@ window.onload = function () {
     };
 
     this.remove = function () {
-      //remove it and delete it from the gameboard
+      //Remove a peça capturada do ttabuleiro
       this.element.css("display", "none");
       if (this.player == 1) {
         $('#player2').append("<div class='capturedPiece'></div>");
@@ -138,9 +136,9 @@ window.onload = function () {
   function Tile(element, position) {
     //linked DOM element
     this.element = element;
-    //position in gameboard
+    //Posição do quadrado no tabuleiro
     this.position = position;
-    //if tile is in range from the piece
+    //Range daquela posição
     this.inRange = function (piece) {
       for (let k of pieces)
         if (k.position[0] == this.position[0] && k.position[1] == this.position[1]) return 'wrong';
@@ -173,9 +171,9 @@ window.onload = function () {
     initalize: function () {
       var countPieces = 0;
       var countTiles = 0;
-      for (let row in this.board) { //row is the index
-        for (let column in this.board[row]) { //column is the index
-          //whole set of if statements control where the tiles and pieces should be placed on the board
+      for (let row in this.board) { //Percorre as 8 linhas do tabuleiro
+        for (let column in this.board[row]) { //Percorre as 8 colunas do tabuleiro
+          //Decide onde renderizar um quadrado e onde inserir uma peça 
           if (row % 2 == 1) {
             if (column % 2 == 0) {
               countTiles = this.tileRender(row, column, countTiles)
@@ -204,16 +202,17 @@ window.onload = function () {
       pieces[countPieces] = new Piece($("#" + countPieces), [parseInt(row), parseInt(column)]);
       return countPieces + 1;
     },
-    //check if the location has an object
+    //Verifica a localição de uma peça é válida
     isValidPlacetoMove: function (row, column) {
-      // console.log(row); console.log(column); console.log(this.board);
+      // Verifica se a posição está dentro do tabuleiro
       if (row < 0 || row > 7 || column < 0 || column > 7) return false;
+      // Preenchido na criação do tabuleiro, verifica se a posição é válida
       if (this.board[row][column] == 0) {
         return true;
       }
       return false;
     },
-    //change the active player - also changes div.turn's CSS
+    //Altera o jogador ativo - instrumentado por evento na div.turn
     changePlayerTurn: function () {
       if (this.playerTurn == 1) {
         this.playerTurn = 2;
@@ -242,17 +241,18 @@ window.onload = function () {
       this.continuousjump = false;
       for (let k of pieces) {
         k.allowedtomove = false;
-        // if jump exist, only set those "jump" pieces "allowed to move"
+        // Permite o pulo somente se for um movimento permitido"
         if (k.position.length != 0 && k.player == this.playerTurn && k.canJumpAny()) {
           this.jumpexist = true
           k.allowedtomove = true;
         }
       }
-      // if jump doesn't exist, all pieces are allowed to move
+      // Caso não exista o movimento, todas as peças do turno em questão tem permição para iniciar um movimento
       if (!this.jumpexist) {
         for (let k of pieces) k.allowedtomove = true;
       }
     },
+
     // Possibly helpful for communication with back-end.
     str_board: function () {
       ret = ""
@@ -274,14 +274,14 @@ window.onload = function () {
     }
   }
 
-  //initialize the board
+  //Inicializa o tabuleiro
   Board.initalize();
 
   /***
   Events
   ***/
 
-  //select the piece on click if it is the player's turn
+  //Verifica se a peça clicada é do jogador daquele turno
   $('.piece').on("click", function () {
     var selected;
     var isPlayersTurn = ($(this).parent().attr("class").split(' ')[0] == "player" + Board.playerTurn + "pieces");
@@ -303,37 +303,37 @@ window.onload = function () {
     }
   });
 
-  //reset game when clear button is pressed
+  //Reseta o jogo, simples F5
   $('#cleargame').on("click", function () {
     Board.clear();
   });
 
-  //move piece when tile is clicked
+  //Move a peça quando um espaço é clicado
   $('.tile').on("click", function () {
-    //make sure a piece is selected
+    //Verifica se uma peça está selecionada
     if ($('.selected').length != 0) {
-      //find the tile object being clicked
+      //Encontra o espaço selecionado
       var tileID = $(this).attr("id").replace(/tile/, '');
       var tile = tiles[tileID];
-      //find the piece being selected
+      //Encontra a peça selecionada
       var piece = pieces[$('.selected').attr("id")];
-      //check if the tile is in range from the object
+      //Verifica para quais espaços aquela peça pode se mover
       var inRange = tile.inRange(piece);
       if (inRange != 'wrong') {
-        //if the move needed is jump, then move it but also check if another move can be made (double and triple jumps)
+        //Se o espaço clicado não estiver no alcance da peça, verifica se com captura é possível realizar o movimento
         if (inRange == 'jump') {
           if (piece.opponentJump(tile)) {
+            // Movimenta a peça
             piece.move(tile);
+            // Se possível realizar outra captura mantem a peça selecionada
             if (piece.canJumpAny()) {
-              // Board.changePlayerTurn(); //change back to original since another turn can be made
               piece.element.addClass('selected');
-              // exist continuous jump, you are not allowed to de-select this piece or select other pieces
               Board.continuousjump = true;
             } else {
               Board.changePlayerTurn()
             }
           }
-          //if it's regular then move it if no jumping is available
+          // Caso a captura não seja possível, somente movimentação simples
         } else if (inRange == 'regular' && !Board.jumpexist) {
           if (!piece.canJumpAny()) {
             piece.move(tile);
